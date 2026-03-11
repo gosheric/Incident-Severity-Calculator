@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body { font-family: sans-serif; background-color: #f0f2f5; padding: 20px; }
+    .flex-container { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
+    .card { flex: 1; min-width: 450px; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-top: 6px solid #b71c1c; }
+    h2 { font-size: 18px; color: #b71c1c; margin-top: 0; text-transform: uppercase; }
+    label { display: block; margin-top: 15px; font-weight: 600; font-size: 12px; color: #666; }
+    select { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ddd; border-radius: 6px; }
+    .result-box { margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; border: 1px solid #eee; }
+    .res-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; font-size: 14px; }
+    .res-row:last-child { border-bottom: none; }
+    .val { font-weight: bold; color: #2e7d32; }
+    .sev-val { font-weight: 800; color: #b71c1c; }
+    .status { font-style: italic; font-size: 11px; color: #b71c1c; display: none; }
+  </style>
+</head>
+<body>
+
+<div class="flex-container">
+  <!-- LOCATION CALCULATOR -->
+  <div class="card">
+    <h2>📍 Location Calculator</h2>
+    <label>Location Selection:</label>
+    <select id="loc-select" onchange="runCalc('Location')"></select>
+    <label>Q1: Impact:</label>
+    <select id="loc-q1" onchange="runCalc('Location')"></select>
+    <label>Q2: Workaround:</label>
+    <select id="loc-q2" onchange="runCalc('Location')"></select>
+    <label>Q3: Criticality:</label>
+    <select id="loc-q3" onchange="runCalc('Location')"></select>
+    
+    <div id="loc-status" class="status">Updating Spreadsheet...</div>
+    <div class="result-box">
+      <div class="res-row"><span>Score Points:</span><span id="loc-res-score" class="val">-</span></div>
+      <div class="res-row"><span>SLA Priority:</span><span id="loc-res-priority" class="val">-</span></div>
+      <div class="res-row"><span>Severity:</span><span id="loc-res-sev" class="sev-val">-</span></div>
+      <div class="res-row"><span>Location Tier:</span><span id="loc-res-tier" class="val">-</span></div>
+    </div>
+  </div>
+
+  <!-- APPLICATION CALCULATOR -->
+  <div class="card">
+    <h2>💻 Application Calculator</h2>
+    <label>Application Selection:</label>
+    <select id="app-select" onchange="runCalc('Application')"></select>
+    <label>Q1: Impact:</label>
+    <select id="app-q1" onchange="runCalc('Application')"></select>
+    <label>Q2: Workaround:</label>
+    <select id="app-q2" onchange="runCalc('Application')"></select>
+    <label>Q3: Criticality:</label>
+    <select id="app-q3" onchange="runCalc('Application')"></select>
+    
+    <div id="app-status" class="status">Updating Spreadsheet...</div>
+    <div class="result-box">
+      <div class="res-row"><span>Score Points:</span><span id="app-res-score" class="val">-</span></div>
+      <div class="res-row"><span>SLA Priority:</span><span id="app-res-priority" class="val">-</span></div>
+      <div class="res-row"><span>Severity:</span><span id="app-res-sev" class="sev-val">-</span></div>
+      <div class="res-row"><span>Product Tier:</span><span id="app-res-tier" class="val">-</span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  window.onload = () => {
+    google.script.run.withSuccessHandler(initUI).getDropdownData();
+  };
+
+  function initUI(data) {
+    const fill = (id, list) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.innerHTML = '';
+      list.forEach(item => el.add(new Option(item, item)));
+    };
+
+    fill('loc-select', data.locations);
+    fill('loc-q1', data.q1LocationOptions);
+    fill('loc-q2', data.q2LocationOptions);
+    fill('loc-q3', data.q3LocationOptions);
+
+    fill('app-select', data.assets);
+    fill('app-q1', data.q1AppOptions);
+    fill('app-q2', data.q2AppOptions);
+    fill('app-q3', data.q3AppOptions);
+
+    runCalc('Location');
+    runCalc('Application');
+  }
+
+  function runCalc(type) {
+    const prefix = (type === 'Location') ? 'loc' : 'app';
+    document.getElementById(prefix + '-status').style.display = 'block';
+
+    const payload = {
+      type: type,
+      selection: document.getElementById(prefix + '-select').value,
+      q1: document.getElementById(prefix + '-q1').value,
+      q2: document.getElementById(prefix + '-q2').value,
+      q3: document.getElementById(prefix + '-q3').value
+    };
+
+    google.script.run.withSuccessHandler(res => {
+      document.getElementById(prefix + '-status').style.display = 'none';
+      document.getElementById(prefix + '-res-score').innerText = res.score;
+      document.getElementById(prefix + '-res-priority').innerText = res.priority;
+      document.getElementById(prefix + '-res-sev').innerText = res.severity;
+      document.getElementById(prefix + '-res-tier').innerText = res.tier || "N/A";
+    }).calculateSeverity(payload);
+  }
+</script>
+</body>
+</html>
